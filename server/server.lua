@@ -1,5 +1,6 @@
 -- Variables
-local QBCore = exports['qb-core']:GetCoreObject()
+local QBCore = exports['qb-core']:GetCoreObject({ 'Functions', 'Commands' })
+local sharedWeapons = exports['qb-core']:GetShared('Weapons')
 local frozen = false
 local permissions = {
     ['kill'] = 'admin',
@@ -20,7 +21,7 @@ local permissions = {
 function GetQBPlayers()
     local playerReturn = {}
     local players = QBCore.Functions.GetQBPlayers()
-    
+
     for id, player in pairs(players) do
         local playerPed = GetPlayerPed(id)
         local name = (player.PlayerData.charinfo.firstname or '') .. ' ' .. (player.PlayerData.charinfo.lastname or '')
@@ -44,7 +45,7 @@ end)
 
 -- Get Players
 QBCore.Functions.CreateCallback('test:getplayers', function(_, cb) -- WORKS
-    local players =  GetQBPlayers()
+    local players = GetQBPlayers()
     cb(players)
 end)
 
@@ -280,7 +281,7 @@ end)
 RegisterNetEvent('qb-admin:server:SaveCar', function(mods, vehicle, _, plate)
     local src = source
     if QBCore.Functions.HasPermission(src, 'admin') or IsPlayerAceAllowed(src, 'command') then
-        local Player = QBCore.Functions.GetPlayer(src)
+        local Player = exports['qb-core']:GetPlayer(src)
         local result = MySQL.query.await('SELECT plate FROM player_vehicles WHERE plate = ?', { plate })
         if result[1] == nil then
             MySQL.insert('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, state) VALUES (?, ?, ?, ?, ?, ?, ?)', {
@@ -349,7 +350,7 @@ end, 'admin')
 QBCore.Commands.Add('report', Lang:t('info.admin_report'), { { name = 'message', help = 'Message' } }, true, function(source, args)
     local src = source
     local msg = table.concat(args, ' ')
-    local Player = QBCore.Functions.GetPlayer(source)
+    local Player = exports['qb-core']:GetPlayer(source)
     TriggerClientEvent('qb-admin:client:SendReport', -1, GetPlayerName(src), src, msg)
     TriggerEvent('qb-log:server:CreateLog', 'report', 'Report', 'green', '**' .. GetPlayerName(source) .. '** (CitizenID: ' .. Player.PlayerData.citizenid .. ' | ID: ' .. source .. ') **Report:** ' .. msg, false)
 end)
@@ -384,8 +385,8 @@ QBCore.Commands.Add('givenuifocus', Lang:t('commands.nui_focus'), { { name = 'id
 end, 'admin')
 
 QBCore.Commands.Add('warn', Lang:t('commands.warn_a_player'), { { name = 'ID', help = 'Player' }, { name = 'Reason', help = 'Mention a reason' } }, true, function(source, args)
-    local targetPlayer = QBCore.Functions.GetPlayer(tonumber(args[1]))
-    local senderPlayer = QBCore.Functions.GetPlayer(source)
+    local targetPlayer = exports['qb-core']:GetPlayer(tonumber(args[1]))
+    local senderPlayer = exports['qb-core']:GetPlayer(source)
     table.remove(args, 1)
     local msg = table.concat(args, ' ')
     local warnId = 'WARN-' .. math.random(1111, 9999)
@@ -405,22 +406,22 @@ end, 'admin')
 
 QBCore.Commands.Add('checkwarns', Lang:t('commands.check_player_warning'), { { name = 'id', help = 'Player' }, { name = 'Warning', help = 'Number of warning, (1, 2 or 3 etc..)' } }, false, function(source, args)
     if args[2] == nil then
-        local targetPlayer = QBCore.Functions.GetPlayer(tonumber(args[1]))
+        local targetPlayer = exports['qb-core']:GetPlayer(tonumber(args[1]))
         local result = MySQL.query.await('SELECT * FROM player_warns WHERE targetIdentifier = ?', { targetPlayer.PlayerData.license })
         TriggerClientEvent('chat:addMessage', source, 'SYSTEM', 'warning', targetPlayer.PlayerData.name .. ' has ' .. tablelength(result) .. ' warnings!')
     else
-        local targetPlayer = QBCore.Functions.GetPlayer(tonumber(args[1]))
+        local targetPlayer = exports['qb-core']:GetPlayer(tonumber(args[1]))
         local warnings = MySQL.query.await('SELECT * FROM player_warns WHERE targetIdentifier = ?', { targetPlayer.PlayerData.license })
         local selectedWarning = tonumber(args[2])
         if warnings[selectedWarning] ~= nil then
-            local sender = QBCore.Functions.GetPlayer(warnings[selectedWarning].senderIdentifier)
+            local sender = exports['qb-core']:GetPlayer(warnings[selectedWarning].senderIdentifier)
             TriggerClientEvent('chat:addMessage', source, 'SYSTEM', 'warning', targetPlayer.PlayerData.name .. ' has been warned by ' .. sender.PlayerData.name .. ', Reason: ' .. warnings[selectedWarning].reason)
         end
     end
 end, 'admin')
 
 QBCore.Commands.Add('delwarn', Lang:t('commands.delete_player_warning'), { { name = 'id', help = 'Player' }, { name = 'Warning', help = 'Number of warning, (1, 2 or 3 etc..)' } }, true, function(source, args)
-    local targetPlayer = QBCore.Functions.GetPlayer(tonumber(args[1]))
+    local targetPlayer = exports['qb-core']:GetPlayer(tonumber(args[1]))
     local warnings = MySQL.query.await('SELECT * FROM player_warns WHERE targetIdentifier = ?', { targetPlayer.PlayerData.license })
     local selectedWarning = tonumber(args[2])
     if warnings[selectedWarning] ~= nil then
@@ -434,7 +435,7 @@ QBCore.Commands.Add('reportr', Lang:t('commands.reply_to_report'), { { name = 'i
     local playerId = tonumber(args[1])
     table.remove(args, 1)
     local msg = table.concat(args, ' ')
-    local OtherPlayer = QBCore.Functions.GetPlayer(playerId)
+    local OtherPlayer = exports['qb-core']:GetPlayer(playerId)
     if msg == '' then return end
     if not OtherPlayer then return TriggerClientEvent('QBCore:Notify', src, 'Player is not online', 'error') end
     if not QBCore.Functions.HasPermission(src, 'admin') or IsPlayerAceAllowed(src, 'command') ~= 1 then return end
@@ -459,7 +460,7 @@ QBCore.Commands.Add('setmodel', Lang:t('commands.change_ped_model'), { { name = 
         if target == nil then
             TriggerClientEvent('qb-admin:client:SetModel', source, tostring(model))
         else
-            local Trgt = QBCore.Functions.GetPlayer(target)
+            local Trgt = exports['qb-core']:GetPlayer(target)
             if Trgt ~= nil then
                 TriggerClientEvent('qb-admin:client:SetModel', target, tostring(model))
             else
@@ -519,7 +520,7 @@ QBCore.Commands.Add('setammo', Lang:t('commands.ammo_amount_set'), { { name = 'a
     local weapon = GetSelectedPedWeapon(ped)
     if weapon and amount then
         SetPedAmmo(ped, weapon, amount)
-        TriggerClientEvent('QBCore:Notify', src, Lang:t('info.ammoforthe', { value = amount, weapon = QBCore.Shared.Weapons[weapon]['label'] }), 'success')
+        TriggerClientEvent('QBCore:Notify', src, Lang:t('info.ammoforthe', { value = amount, weapon = sharedWeapons[weapon]['label'] }), 'success')
     end
 end, 'admin')
 
