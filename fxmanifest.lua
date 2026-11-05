@@ -1,4 +1,4 @@
-fx_version 'cerulean'
+afx_version 'cerulean'
 game 'gta5'
 lua54 'yes'
 author 'Kakarot'
@@ -10,11 +10,11 @@ ui_page 'html/index.html'
 shared_scripts {
     '@qb-core/shared/locale.lua',
     'locales/en.lua',
-    'locales/*.lua'
+    'locales/*.lua',
+    'config.lua'
 }
 
 client_scripts {
-    '@menuv/menuv.lua',
     'client/noclip.lua',
     'client/entity_view.lua',
     'client/blipsnames.lua',
@@ -30,7 +30,6 @@ server_scripts {
 
 files {
     'html/index.html',
-    'html/index.js'
+    'html/css/style.css',
+    'html/js/script.js'
 }
-
-dependency 'menuv'
