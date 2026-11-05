@@ -3,12 +3,15 @@ local ShowBlips = false
 local ShowNames = false
 local NetCheck1 = false
 local NetCheck2 = false
+local Tags = {}
 
 CreateThread(function()
     while true do
-        Wait(1000)
         if NetCheck1 or NetCheck2 then
             TriggerServerEvent('qb-admin:server:GetPlayersForBlips')
+            Wait(1000)
+        else
+            Wait(2500)
         end
     end
 end)
@@ -42,22 +45,27 @@ RegisterNetEvent('qb-admin:client:toggleNames', function()
 end)
 
 RegisterNetEvent('qb-admin:client:Show', function(players)
-    QBCore.Functions.TriggerCallback('qb-admin:isAdmin', function(isAdmin)
-        if not isAdmin then return end
+    do
         for _, player in pairs(players) do
             local playeridx = GetPlayerFromServerId(player.id)
             local ped = GetPlayerPed(playeridx)
             local blip = GetBlipFromEntity(ped)
             local name = 'ID: ' .. player.id .. ' | ' .. player.name
 
-            local Tag = CreateFakeMpGamerTag(ped, name, false, false, '', false)
-            SetMpGamerTagAlpha(Tag, 0, 255)       -- Sets "MP_TAG_GAMER_NAME" bar alpha to 100% (not needed just as a fail safe)
-            SetMpGamerTagAlpha(Tag, 2, 255)       -- Sets "MP_TAG_HEALTH_ARMOUR" bar alpha to 100%
-            SetMpGamerTagAlpha(Tag, 4, 255)       -- Sets "MP_TAG_AUDIO_ICON" bar alpha to 100%
-            SetMpGamerTagAlpha(Tag, 6, 255)       -- Sets "MP_TAG_PASSIVE_MODE" bar alpha to 100%
-            SetMpGamerTagHealthBarColour(Tag, 25) --https://wiki.rage.mp/index.php?title=Fonts_and_Colors
+            local entry = Tags[player.id]
 
             if ShowNames then
+                if not entry or entry.ped ~= ped then
+                    if entry then RemoveMpGamerTag(entry.tag) end
+                    entry = { tag = CreateFakeMpGamerTag(ped, name, false, false, '', false), ped = ped }
+                    Tags[player.id] = entry
+                    SetMpGamerTagAlpha(entry.tag, 0, 255)       -- name
+                    SetMpGamerTagAlpha(entry.tag, 2, 255)       -- health / armour bar
+                    SetMpGamerTagAlpha(entry.tag, 4, 255)       -- audio icon
+                    SetMpGamerTagAlpha(entry.tag, 6, 255)       -- passive mode icon
+                    SetMpGamerTagHealthBarColour(entry.tag, 25)
+                end
+                local Tag = entry.tag
                 SetMpGamerTagVisibility(Tag, 0, true)     -- Activates the player ID Char name and FiveM name
                 SetMpGamerTagVisibility(Tag, 2, true)     -- Activates the health (and armor if they have it on) bar below the player names
                 if NetworkIsPlayerTalking(playeridx) then
@@ -71,11 +79,10 @@ RegisterNetEvent('qb-admin:client:Show', function(players)
                     SetMpGamerTagVisibility(Tag, 6, false)
                 end
             else
-                SetMpGamerTagVisibility(Tag, 0, false)
-                SetMpGamerTagVisibility(Tag, 2, false)
-                SetMpGamerTagVisibility(Tag, 4, false)
-                SetMpGamerTagVisibility(Tag, 6, false)
-                RemoveMpGamerTag(Tag) -- Unloads the tags till you activate it again
+                if entry then
+                    RemoveMpGamerTag(entry.tag) -- unloads the tag until names are enabled again
+                    Tags[player.id] = nil
+                end
                 NetCheck2 = false
             end
 
@@ -234,5 +241,9 @@ RegisterNetEvent('qb-admin:client:Show', function(players)
                 NetCheck1 = false
             end
         end
-    end)
+    end
 end)
+
+GetNamesBlipsState = function()
+    return ShowNames, ShowBlips
+end
