@@ -222,7 +222,12 @@ StopNoClip = function()
 end
 
 ToggleNoClip = function(state)
-    IsNoClipping      = state or not IsNoClipping
+    -- explicit true/false sets the state; anything else (nil, a stray argument) toggles
+    if state == true or state == false then
+        IsNoClipping = state
+    else
+        IsNoClipping = not IsNoClipping
+    end
     PlayerPed         = PlayerPedId()
     PlayerIsInVehicle = IsPedInAnyVehicle(PlayerPed, false)
     if PlayerIsInVehicle ~= 0 and IsPedDrivingVehicle(PlayerPed, GetVehiclePedIsIn(PlayerPed, false)) then
@@ -288,3 +293,7 @@ AddEventHandler('onResourceStop', function(resourceName)
         SetEntityInvincible(NoClipEntity, false)
     end
 end)
+
+IsNoClipActive = function()
+    return IsNoClipping
+end
