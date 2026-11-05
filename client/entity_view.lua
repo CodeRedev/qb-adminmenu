@@ -450,3 +450,11 @@ RunEntityViewThread = function()
         end
     end)
 end
+
+GetEntityViewStates = function()
+    return { freeaim = EntityFreeAim, peds = EntityPedView, objects = EntityObjectView, vehicles = EntityVehicleView }
+end
+
+GetEntityViewDistance = function()
+    return EntityViewDistance
+end
