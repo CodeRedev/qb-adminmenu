@@ -1,6 +1,8 @@
 # qb-adminmenu
 
-![image](https://user-images.githubusercontent.com/57848836/134793591-1ff62665-01e6-4e63-941b-a78dff41ea37.png)
+![image](https://github.com/user-attachments/assets/bed4930b-872c-4047-b806-d3efd475d530)
+
+![image](https://github.com/user-attachments/assets/063a8512-c4e1-4539-8beb-2e5c52ddafe8)
 
 # License
 
