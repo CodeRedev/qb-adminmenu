@@ -1,52 +1,44 @@
 -- Variables
 local QBCore = exports['qb-core']:GetCoreObject({ 'Functions', 'Commands' })
 local sharedWeapons = exports['qb-core']:GetShared('Weapons')
-local frozen = false
-local permissions = {
-    ['kill'] = 'admin',
-    ['ban'] = 'admin',
-    ['noclip'] = 'admin',
-    ['kickall'] = 'admin',
-    ['kick'] = 'admin',
-    ['revive'] = 'admin',
-    ['freeze'] = 'admin',
-    ['goto'] = 'admin',
-    ['spectate'] = 'admin',
-    ['intovehicle'] = 'admin',
-    ['bring'] = 'admin',
-    ['inventory'] = 'admin',
-    ['clothing'] = 'admin'
-}
+local frozen = {}
+local permissions = Config.Permissions
+
+local function isAdmin(src)
+    return QBCore.Functions.HasPermission(src, 'admin') or IsPlayerAceAllowed(src, 'command')
+end
 
 function GetQBPlayers()
     local playerReturn = {}
-    local players = QBCore.Functions.GetQBPlayers()
-
-    for id, player in pairs(players) do
-        local playerPed = GetPlayerPed(id)
-        local name = (player.PlayerData.charinfo.firstname or '') .. ' ' .. (player.PlayerData.charinfo.lastname or '')
+    for id, player in pairs(QBCore.Functions.GetQBPlayers()) do
+        local info = player.PlayerData.charinfo
+        local char = (info.firstname or '') .. ' ' .. (info.lastname or '')
+        local user = player.PlayerData.name or ''
         playerReturn[#playerReturn + 1] = {
-            name = name .. ' | (' .. (player.PlayerData.name or '') .. ')',
             id = id,
-            coords = GetEntityCoords(playerPed),
-            cid = name,
+            name = char .. ' | (' .. user .. ')',
+            cid = char,
+            charname = char,
+            user = user,
             citizenid = player.PlayerData.citizenid,
-            sources = playerPed,
-            sourceplayer = id
+            ping = GetPlayerPing(id),
         }
     end
+    table.sort(playerReturn, function(a, b) return a.id < b.id end)
     return playerReturn
 end
 
 -- Get Dealers
-QBCore.Functions.CreateCallback('test:getdealers', function(_, cb)
-    cb(exports['qb-drugs']:GetDealers())
+QBCore.Functions.CreateCallback('test:getdealers', function(src, cb)
+    if not isAdmin(src) then return cb({}) end
+    local ok, dealers = pcall(function() return exports['qb-drugs']:GetDealers() end)
+    cb(ok and dealers or {})
 end)
 
 -- Get Players
-QBCore.Functions.CreateCallback('test:getplayers', function(_, cb) -- WORKS
-    local players = GetQBPlayers()
-    cb(players)
+QBCore.Functions.CreateCallback('test:getplayers', function(src, cb)
+    if not isAdmin(src) then return cb({}) end
+    cb(GetQBPlayers())
 end)
 
 QBCore.Functions.CreateCallback('qb-admin:isAdmin', function(src, cb) -- WORKS
@@ -87,6 +79,7 @@ end
 -- Events
 RegisterNetEvent('qb-admin:server:GetPlayersForBlips', function()
     local src = source
+    if not isAdmin(src) then return end
     local players = GetQBPlayers()
     TriggerClientEvent('qb-admin:client:Show', src, players)
 end)
@@ -167,13 +160,8 @@ RegisterNetEvent('qb-admin:server:freeze', function(player)
     local src = source
     if QBCore.Functions.HasPermission(src, permissions['freeze']) or IsPlayerAceAllowed(src, 'command') then
         local target = GetPlayerPed(player.id)
-        if not frozen then
-            frozen = true
-            FreezeEntityPosition(target, true)
-        else
-            frozen = false
-            FreezeEntityPosition(target, false)
-        end
+        frozen[player.id] = not frozen[player.id]
+        FreezeEntityPosition(target, frozen[player.id])
     else
         BanPlayer(src)
     end
@@ -206,7 +194,7 @@ RegisterNetEvent('qb-admin:server:intovehicle', function(player)
             end
             if seat ~= -1 then
                 SetPedIntoVehicle(admin, vehicle, seat)
-                TriggerClientEvent('QBCore:Notify', src, Lang:t('sucess.entered_vehicle'), 'success', 5000)
+                TriggerClientEvent('QBCore:Notify', src, Lang:t('success.entered_vehicle'), 'success', 5000)
             else
                 TriggerClientEvent('QBCore:Notify', src, Lang:t('error.no_free_seats'), 'danger', 5000)
             end
@@ -300,6 +288,10 @@ RegisterNetEvent('qb-admin:server:SaveCar', function(mods, vehicle, _, plate)
     else
         BanPlayer(src)
     end
+end)
+
+AddEventHandler('playerDropped', function()
+    frozen[source] = nil
 end)
 
 -- Commands
